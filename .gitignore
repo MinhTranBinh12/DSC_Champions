@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches & Embeddings (Avoid pushing huge binary files to GitHub)
+cache/
+*.npy
+*.pkl
+
+# Raw & Processed Datasets
+selected-contexts/
+train.json
+public-official.json
+
+# Submission files
+submission.json
+submission.zip
+
+# Virtual Environments
+venv/
+env/
+.venv/

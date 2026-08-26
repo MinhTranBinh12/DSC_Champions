@@ -1,0 +1,8 @@
+torch>=2.0.0
+sentence-transformers>=2.2.2
+transformers>=4.30.0
+rank-bm25>=0.2.2
+pyvi>=0.1.1
+underthesea>=6.8.0
+numpy>=1.24.0
+tqdm>=4.65.0
