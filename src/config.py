@@ -26,7 +26,7 @@ USE_WORD_SEGMENTATION = True
 # First-Stage Retrieval (BM25 + Dense)
 BM25_K1 = 1.5
 BM25_B = 0.75
-FIRST_STAGE_TOP_K = 50
+FIRST_STAGE_TOP_K = 30
 
 # Bi-Encoder (Dense Retrieval) Configuration
 DENSE_MODEL_NAME = "bkai-foundation-models/vietnamese-bi-encoder"
@@ -34,7 +34,9 @@ DENSE_MODEL_NAME = "bkai-foundation-models/vietnamese-bi-encoder"
 
 # Cross-Encoder (Re-ranking) Configuration
 RERANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
-# Alternative choice: "BAAI/bge-reranker-base"
+RERANK_TOP_K = 15                 # Only rerank Top 15 candidates for 10x-20x speedup
+RERANK_CHUNKS_PER_DOC = 1         # Best chunk per candidate doc
+RERANK_MAX_LENGTH = 256           # Optimized sequence length for fast inference
 
 # Post-processing & Dynamic Thresholding
 DYNAMIC_THRESHOLD_RATIO = 0.88  # Include item if score >= top1_score * ratio
