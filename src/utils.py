@@ -75,28 +75,18 @@ def word_segment(text: str) -> str:
         return text
 
 
-def compute_sample_recall(y_true: Set[str], y_pred: Set[str]) -> float:
-    """Compute Recall for a single sample. Disqualified (Recall=0) if len(y_pred) > 5."""
-    if not y_true or len(y_pred) > 5:
-        return 0.0
-    intersection = y_true.intersection(y_pred)
-    return len(intersection) / len(y_true)
-
-
-def compute_sample_precision(y_true: Set[str], y_pred: Set[str]) -> float:
-    """Compute Precision for a single sample. Disqualified (Precision=0) if len(y_pred) > 5."""
-    if not y_pred or len(y_pred) > 5:
-        return 0.0
-    intersection = y_true.intersection(y_pred)
-    return len(intersection) / len(y_pred)
-
-
 def evaluate_predictions(
     ground_truth: Dict[str, Dict[str, Union[str, List[str]]]],
     predictions: Dict[str, Dict[str, Union[str, List[str]]]]
 ) -> Tuple[float, float]:
     """
-    Evaluate Mean Recall and Mean Precision across all questions in the dataset.
+    Evaluate Mean Recall and Mean Precision using BTC's official scoring logic.
+    
+    Scoring rules (from BTC's scoring.py):
+    - Predictions must have the same number of samples as ground truth.
+    - Each prediction must have 1-5 answers (0 or >5 results in score = 0 for that sample).
+    - Recall = |intersection| / |truth| averaged over all truth samples.
+    - Precision = |intersection| / |predicted| averaged over all predicted samples.
     
     Args:
         ground_truth: Dict with key = q_id, val = {"question": ..., "answer": [doc_id1, doc_id2]}
@@ -105,28 +95,31 @@ def evaluate_predictions(
     Returns:
         (mean_recall, mean_precision)
     """
-    total_recall = 0.0
-    total_precision = 0.0
-    count = 0
+    import numpy as np
 
-    for q_id, sample in ground_truth.items():
-        true_answers = set(str(ans) for ans in sample.get('answer', []))
-        if not true_answers:
-            continue
+    # Extract answer lists keyed by q_id (matching BTC format)
+    y_pred = {k: v['answer'] for k, v in predictions.items()}
+    y_true = {k: v['answer'] if isinstance(v, dict) else v for k, v in ground_truth.items()}
 
-        pred_sample = predictions.get(q_id, {})
-        pred_answers = set(str(ans) for ans in pred_sample.get('answer', []))
+    ids_preds = list(y_pred.keys())
+    ids_truth = list(y_true.keys())
 
-        rec = compute_sample_recall(true_answers, pred_answers)
-        prec = compute_sample_precision(true_answers, pred_answers)
+    if len(ids_preds) != len(ids_truth):
+        print(f"WARNING: Samples mismatch - predictions: {len(ids_preds)}, truth: {len(ids_truth)}")
 
-        total_recall += rec
-        total_precision += prec
-        count += 1
+    # BTC's official scoring: recall and precision with top-5 constraint
+    recall = np.array([
+        len(set(y_true[k]) & set(y_pred.get(k, []))) / len(y_true[k])
+        if y_pred.get(k) and len(y_pred.get(k)) > 0 and len(y_pred.get(k)) <= 5
+        else 0
+        for k in ids_truth
+    ]).mean()
 
-    if count == 0:
-        return 0.0, 0.0
+    precision = np.array([
+        len(set(y_true[k]) & set(y_pred.get(k, []))) / len(y_pred[k])
+        if y_pred.get(k) and len(y_pred.get(k)) > 0 and len(y_pred.get(k)) <= 5
+        else 0
+        for k in ids_preds
+    ]).mean()
 
-    mean_recall = total_recall / count
-    mean_precision = total_precision / count
-    return mean_recall, mean_precision
+    return float(recall), float(precision)
